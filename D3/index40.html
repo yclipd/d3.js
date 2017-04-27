@@ -1,0 +1,233 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<!--<script language="javascript" src="/scripts/d3.min.js"></script> -->
+	<script src="scripts/lodash.js" charset="utf-8"></script>
+	<script src="scripts/d3/build/d3.js" charset="utf-8"></script>
+	<style>
+		.nodetext {
+			font-size: 12px ;
+			font-family: SimSun;
+			fill:#000000;
+		}
+
+		.linetext {
+			font-size: 12px ;
+			font-family: SimSun;
+			fill:#0000FF;
+			fill-opacity:0.6;
+		}
+		.d3-tip {
+		  line-height: 1;
+		  padding: 12px;
+		  background: rgba(0, 0, 0, 0.8);
+		  color: #fff;
+		  border-radius: 5px;
+		}		
+
+		.d3-tip:after {
+		  box-sizing: border-box;
+		  display: inline;
+		  font-size: 8px;
+		  width: 100%;
+		  line-height:1;
+		  color: rgba(0, 0, 0, 0.8);
+		  content: "\25BC";
+		  position: absolute;
+		  text-align: center;
+		}
+		.d3-tip.n:after {
+		  margin: -2px 0 0 0;
+		  top: 100%;
+		  left: 0;
+		}
+
+		.d3-menu {
+		  line-height: 16px;
+		  background: #fff;
+		  color: #444;
+		  border-radius: 0px;
+		  border:1px solid #ccc;
+		  box-shadow:0px 6px 12px rgba(0,0,0,0.175);
+		  margin: 0px
+		}	
+
+		.d3-menu ul{
+			list-style: none;
+			text-align: left;
+			font-size: 12px;
+			margin: 0px;
+			padding: 1px		
+		}	
+		.d3-menu li > a:focus, .d3-menu li > a:hover {
+			color: #262626;
+			text-decoration: none;
+			background-color: #f5f5f5;
+		}
+		.d3-menu li > a {
+			display: block;		
+			clear: both;
+			font-weight: none;
+			line-height: 18px;
+			color: #333;
+			white-space: nowrap;
+			text-decoration: none;
+			padding: 2px
+		}
+			.links line {
+		  stroke: #aaa;
+		}					
+	</style>
+</head>
+<body>
+	<script language="javascript">
+		var width = 1300;
+		var height = 850;
+		var img_w = 24;
+		var img_h = 24;
+		var text_dx = -18;
+		var text_dy = 4;
+
+		var svg = d3.select("body")
+					.append("svg:svg")
+					.attr("width",width)
+					.attr("height",height);
+		var vis = svg
+  				  .append('svg:g');
+
+		vis.append('svg:rect')
+		    .attr('width', width)
+		    .attr('height', height)
+		    .attr('fill', 'white'); 
+	
+		var simulation = d3.forceSimulation()
+		    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+		    .force("charge", d3.forceManyBody())		    
+		    .force("center", d3.forceCenter(width / 2, height / 2));
+		simulation.alphaTarget(0);
+		simulation.velocityDecay(0.4); 
+
+		d3.json("data.json",function(error, graph){
+			  if( error ){
+					return console.log(error);
+			  }		
+			  var link = vis.append("g")
+			    .attr("class", "links")
+			    .selectAll("line")
+			    .data(graph.links)
+			    .enter().append("line");
+
+			  var node = svg.append("g")
+			    .attr("class", "nodes")
+			    .selectAll("image")
+			    .data(graph.nodes)
+			    .enter().append("image")
+				.attr("width",img_w)
+				.attr("height",img_h)
+				.attr("xlink:href",function(d){
+					return imgFormat(d.type);
+				})
+				.call(d3.drag()
+          				.on("start", dragstarted)
+          				.on("drag", dragged)
+          				.on("end", dragended)
+          		);	
+
+			  node.append("title")
+			      .text(function(d) { return d.id; });
+
+			  simulation
+			      .nodes(graph.nodes)
+			      .on("tick", ticked);
+
+			  simulation.force("link")
+			      		.links(graph.links);
+			  
+			  simulation.alphaMin(0.1);
+			  simulation.fix;
+			 console.log(graph.nodes);
+			 			 console.log(graph.links);
+
+
+
+			  function ticked() {
+			    link
+			        .attr("x1", function(d) { return d.source.x; })
+			        .attr("y1", function(d) { return d.source.y; })
+			        .attr("x2", function(d) { return d.target.x; })
+			        .attr("y2", function(d) { return d.target.y; });
+
+			    node
+			        .attr("x", function(d) { return d.x - 24/2; })
+			        .attr("y", function(d) { return d.y - 24/2; });
+			  }	
+ 			  //simulation.stop();
+			  	/*
+				function force(alpha) {
+					  for (var i = 0, n = graph.nodes.length, node, k = alpha * 0.1; i < n; ++i) {
+					    node = graph.nodes[i];
+					    node.vx -= node.x * k;
+					    node.vy -= node.y * k;
+					  }
+				}
+
+				force(8);
+				*/
+		});
+
+
+
+		//格式化图片
+		function imgFormat(type){
+			var img, macImg, qqImg, qqGroupImg, mobileImg, idImg;
+			macImg = "img/5.png";
+			qqImg = "img/33.png";
+			qqGroupImg = "img/33.png";
+			mobileImg = "img/33.png";
+			idImg = "img/33.png";
+			switch(type)
+			{
+				case "mac":
+				  img = macImg;
+				  break;
+				case "qq":
+				  img = qqImg;
+				  break;
+				case "qqg":
+				  img = qqGroupImg;
+				  break;
+				case "mobile":
+				  img = mobileImg;
+				  break;
+				case "id":
+				  img = idImg;
+				  break;				  				  
+				default:
+				  img = idImg;
+				  break;				  
+			}
+			return img;
+		}
+
+		function dragstarted(d) {
+		  if (!d3.event.active) 
+		  	simulation.alphaTarget(0.3).restart();
+		  d.fx = d.x;
+		  d.fy = d.y;
+		}
+
+		function dragged(d) {
+		  d.fx = d3.event.x;
+		  d.fy = d3.event.y;
+		}
+
+		function dragended(d) {
+		  if (!d3.event.active) 
+		  	simulation.alphaTarget(0);
+		  d.fx = d3.event.x;
+		  d.fy = d3.event.y;
+		}
+    </script>
+</body>
+</html>

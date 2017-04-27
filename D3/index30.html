@@ -1,0 +1,307 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<!--<script language="javascript" src="/scripts/d3.min.js"></script> -->
+	<script src="scripts/d3.js" charset="utf-8"></script>
+	<script src="scripts/lodash.js" charset="utf-8"></script>
+	<script src="scripts/d3.tip.js" charset="utf-8"></script>
+	<script src="scripts/d3.menu.js" charset="utf-8"></script>
+	<style>
+		.nodetext {
+			font-size: 12px ;
+			font-family: SimSun;
+			fill:#000000;
+		}
+
+		.linetext {
+			font-size: 12px ;
+			font-family: SimSun;
+			fill:#0000FF;
+			fill-opacity:0.6;
+		}
+		.d3-tip {
+		  line-height: 1;
+		  padding: 12px;
+		  background: rgba(0, 0, 0, 0.8);
+		  color: #fff;
+		  border-radius: 5px;
+		}		
+
+		.d3-tip:after {
+		  box-sizing: border-box;
+		  display: inline;
+		  font-size: 8px;
+		  width: 100%;
+		  line-height:1;
+		  color: rgba(0, 0, 0, 0.8);
+		  content: "\25BC";
+		  position: absolute;
+		  text-align: center;
+		}
+		.d3-tip.n:after {
+		  margin: -2px 0 0 0;
+		  top: 100%;
+		  left: 0;
+		}
+
+		.d3-menu {
+		  line-height: 16px;
+		  background: #fff;
+		  color: #444;
+		  border-radius: 0px;
+		  border:1px solid #ccc;
+		  box-shadow:0px 6px 12px rgba(0,0,0,0.175);
+		  margin: 0px
+		}	
+
+		.d3-menu ul{
+			list-style: none;
+			text-align: left;
+			font-size: 12px;
+			margin: 0px;
+			padding: 1px		
+		}	
+		.d3-menu li > a:focus, .d3-menu li > a:hover {
+			color: #262626;
+			text-decoration: none;
+			background-color: #f5f5f5;
+		}
+		.d3-menu li > a {
+			display: block;		
+			clear: both;
+			font-weight: none;
+			line-height: 18px;
+			color: #333;
+			white-space: nowrap;
+			text-decoration: none;
+			padding: 2px
+		}
+						
+	</style>
+</head>
+<body>
+	<script language="javascript">
+		var width = 1500;
+		var height = 850;
+		var img_w = 24;
+		var img_h = 24;
+		var text_dx = -18;
+		var text_dy = 4;
+
+		var svg = d3.select("body")
+					.append("svg:svg")
+					.attr("width",width)
+					.attr("height",height);
+		var vis = svg
+  				  .append('svg:g');
+    			  //.call(d3.behavior.zoom().on("zoom", rescale))
+    			  //.on("dblclick.zoom", null);
+
+		vis.append('svg:rect')
+		    .attr('width', width)
+		    .attr('height', height)
+		    .attr('fill', 'white'); 
+
+		/*    
+		var tip = d3.tip()
+		  .attr('class', 'd3-tip')
+		  .offset([-10, 0])
+		  .html(function(d) {
+		    return "<span style='color:#fff; font-size:12px'>" + d.id + "</span>";
+		  });		  
+
+	    var nodeMobileMenu = d3.menu()
+							.attr('class', 'd3-menu')
+							.offset([-10, 0])
+							.html(function(d) {
+								return "<ul onclick='closeMenu()'><li><a href='#'>详情</a></li><li><a href='#'>关联查询</a></li><li><a href='#'>Test</a></li></ul>";
+							 });
+	    var linkMenu = d3.menu()
+							.attr('class', 'd3-menu')
+							.offset([-10, 0])						
+							.html(function(d) {
+								return "<ul onclick='closeMenu()'><li><a href='#'>详情</a></li></ul>";
+							 });
+
+		svg.call(nodeMobileMenu);
+		svg.call(linkMenu);
+		svg.call(tip);
+		svg.on("click", function(d, i){
+			closeMenu();
+		});
+*/
+		var charData;					
+		var force = d3.layout.force().size([width,height])
+					.linkDistance(20)
+					.charge(-50);
+
+		d3.json("data.json",function(error, root){			
+			if( error ){
+				return console.log(error);
+			}
+			charData = root;
+			console.log(root);
+			reDraw(root);									
+		});
+
+		function closeMenu(){
+			nodeMobileMenu.hide();
+			linkMenu.hide();
+		}
+
+		//格式化图片
+		function imgFormat(type){
+			var img, macImg, qqImg, qqGroupImg, mobileImg, idImg;
+			macImg = "img/5.png";
+			qqImg = "img/33.png";
+			qqGroupImg = "img/33.png";
+			mobileImg = "img/33.png";
+			idImg = "img/33.png";
+			switch(type)
+			{
+				case "mac":
+				  img = macImg;
+				  break;
+				case "qq":
+				  img = qqImg;
+				  break;
+				case "qqg":
+				  img = qqGroupImg;
+				  break;
+				case "mobile":
+				  img = mobileImg;
+				  break;
+				case "id":
+				  img = idImg;
+				  break;				  				  
+				default:
+				  img = idImg;
+				  break;				  
+			}
+			return img;
+		}
+
+		function rescale() {
+		  trans=d3.event.translate;
+		  scale=d3.event.scale;
+		  //vis.attr("transform", "translate(" + trans + ")" + " scale(" + scale + ")");
+		}
+
+		function reDraw(root){
+			force
+			.nodes(root.nodes)
+			.links(root.links);			
+			console.log(root.nodes)	;								
+			var edges_line = vis.selectAll("line")
+							.data(root.links, function(d){ return d.id;});
+		
+			var lines =	edges_line.enter()
+						.insert("line", "image")
+						.style("stroke","#ccc")
+						.style("stroke-width", 1);
+
+			//var exitLines = edges_line.exit().remove();						
+								
+			//var edges_text = vis.selectAll(".linetext")
+			//					.data(root.edges, function(d){ return d.id;});
+
+			/*
+			var linesTxt = edges_text.enter()
+						   .append("text")
+						   .attr("class","linetext")							   
+						   .text(function(d){
+								return d.relation;
+						   })
+						   .on('mouseover', tip.show)
+						   .on('mouseout', tip.hide)
+						   .on("contextmenu", function(d, i){							
+								d3.event.preventDefault();
+								linkMenu.show();
+							});
+			var exitTxt = edges_text.exit().remove();	
+			*/
+
+			//图片title			
+			//var nodes_text = vis.selectAll(".nodetext")
+			//					.data(root.nodes, function(d){ return d.val;});
+
+            /* 
+			var nodeTxt	= nodes_text.enter()
+						 .append("text")
+						 .attr("class","nodetext")
+						 .attr("dx",text_dx)
+						 .attr("dy",text_dy)
+						 .text(function(d){
+							return d.val;
+						 });
+			var exitNodeTxt = nodes_text.exit().remove();									  
+			*/	
+			//图片节点								
+			var nodes_img = vis.selectAll("image")
+								.data(root.nodes, function(d){ return d.id;});
+
+			var nodesImg =	nodes_img.enter()
+							.append("image")
+							.attr("width",img_w)
+							.attr("height",img_h)
+							.attr("xlink:href",function(d){
+								return imgFormat(d.type);
+							});						
+							/*
+							.on("dblclick", function(d, i){								
+								d3.json("/addData.json",function(error, root){									
+									if( error ){
+										return console.log(error);
+									} 
+									charData.nodes = _.unionBy(charData.nodes, root.nodes, 'key');
+									charData.edges = _.unionBy(charData.edges, root.links, 'key');
+									reDraw(charData);
+								});								
+							})
+							.on("contextmenu", function(d, i){
+								//alert("点击了右键");
+								d3.event.preventDefault();
+								nodeMobileMenu.show();
+							})													
+							.call(force.drag);
+							*/
+
+			//var exitImg = nodes_img.exit().remove();
+
+			force.on("tick", function(){
+				
+				//限制结点的边界
+				root.nodes.forEach(function(d,i){
+					d.x = d.x - img_w/2 < 0     ? img_w/2 : d.x ;
+					d.x = d.x + img_w/2 > width ? width - img_w/2 : d.x ;
+					d.y = d.y - img_h/2 < 0      ? img_h/2 : d.y ;
+					d.y = d.y + img_h/2 + text_dy > height ? height - img_h/2 - text_dy : d.y ;
+				});
+			
+				//更新连接线的位置
+				 edges_line.attr("x1",function(d){ return d.source.x; });
+				 edges_line.attr("y1",function(d){ return d.source.y; });
+				 edges_line.attr("x2",function(d){ return d.target.x; });
+				 edges_line.attr("y2",function(d){ return d.target.y; });
+				 
+				 //更新连接线上文字的位置
+				 //edges_text.attr("x",function(d){ return (d.source.x + d.target.x) / 2 ; });
+				 //edges_text.attr("y",function(d){ return (d.source.y + d.target.y) / 2 ; });
+				 
+				 
+				 //更新结点图片和文字
+				 nodes_img.attr("x",function(d){ return d.x - img_w/2; });
+				 nodes_img.attr("y",function(d){ return d.y - img_h/2; });
+				 
+				 //nodes_text.attr("x",function(d){ return d.x });
+				 //nodes_text.attr("y",function(d){ return d.y + img_w/2; });
+			});	
+
+			force.start();											
+		}
+
+		  
+        </script>
+</body>
+</html>

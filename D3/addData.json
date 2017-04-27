@@ -1,0 +1,11 @@
+{
+	"nodes":[
+		{ "key": "1598_moblie", "type": "mobile", "val": "1598" },
+		{ "key": "15923459988_moblie", "type": "mobile", "val": "15923459988"},
+		{ "key": "123_moblie", "type": "mobile", "val": "123" }
+	],
+	"edges":[
+		{ "key":"45-88-99_mac->1598_moblie", "source": "45-88-99_mac" , "target": "1598_moblie" , "relation":"关系" },
+		{ "key":"15923459988_moblie->123_moblie", "source": "15923459988_moblie" , "target": "123_moblie" , "relation":"关系" }
+	]
+}

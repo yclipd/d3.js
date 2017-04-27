@@ -1,0 +1,246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<!--<script language="javascript" src="/scripts/d3.min.js"></script> -->
+	<script src="scripts/d3.js" charset="utf-8"></script>
+	<script src="scripts/lodash.js" charset="utf-8"></script>
+	<script src="scripts/d3.tip.js" charset="utf-8"></script>
+	<script src="scripts/d3.menu.js" charset="utf-8"></script>
+	<style>
+		svg {
+			font: 10px sans-serif;
+		}
+		
+		.area {
+			fill: steelblue;
+			clip-path: url(#clip);
+		}
+		
+		.label {
+			text-align: right;
+			width: 80px
+		}
+		
+		.axis path,
+		.axis line {
+			fill: none;
+			stroke: #000;
+			shape-rendering: crispEdges;
+		}
+		
+		.brush .extent {
+			stroke: #fff;
+			fill-opacity: .125;
+			shape-rendering: crispEdges;
+		}
+		
+		.pathline {
+			fill: none;
+			stroke: steelblue;
+			stroke-width: 1px;
+		}
+		.d3-tip {
+		  line-height: 1;
+		  padding: 12px;
+		  background: rgba(0, 0, 0, 0.8);
+		  color: #fff;
+		  border-radius: 5px;
+		}			
+	</style>
+</head>
+
+<body>
+	<script language="javascript">
+		var margin = {top: 10, right: 10, bottom: 100, left: 40},
+			width = 960 - margin.left - margin.right,
+			height = 500 - margin.top - margin.bottom;
+				
+    	var color = d3.scale.category10();			
+		var parseDate = d3.time.format("%Y-%m-%d %H:%M:%S").parse;
+		var lableWidth = margin.left;
+
+		var customTimeFormat = d3.time.format.multi([
+			[".%L", function(d) { return d.getMilliseconds(); }],
+			[":%S", function(d) { return d.getSeconds(); }],
+			["%H:%M", function(d) { return d.getMinutes(); }],
+			["%H", function(d) { return d.getHours(); }],
+			["%d", function(d) { return d.getDay() && d.getDate() != 1; }],
+			["%m月%d", function(d) { return d.getDate() != 1; }],
+			["%m月", function(d) { return d.getMonth(); }],
+			["%Y年", function() { return true; }]
+		]);
+
+		var x = d3.time.scale().range([0, width]);
+		var	y = d3.scale.linear().range([height, 0]);
+
+		var xAxis = d3.svg.axis().scale(x).tickFormat(customTimeFormat).orient("bottom"),
+			yAxis = d3.svg.axis().scale(y).tickFormat('').tickSize(0).orient("left");		  
+
+		var zoom; 
+			
+		var svg = d3.select("body").append("svg")
+					.attr("width", width + margin.left + margin.right)
+					.attr("height", height + margin.top + margin.bottom);
+
+		var defs = svg.append("defs");
+		
+		var clipPath = defs.append("clipPath")
+					  .attr('id', 'chart-content') 
+					  .append('rect') 
+					  .attr('x', margin.left) 
+					  .attr('y', 0) 
+					  .attr('height', height) 
+					  .attr('width', width);
+
+
+		var arrowMarker = defs.append("marker")
+						 .attr("id","arrow")
+						 .attr("markerUnits","strokeWidth")
+						 .attr("markerWidth","12")
+						 .attr("markerHeight","12")
+						 .attr("viewBox","0 0 12 12") 
+						 .attr("refX","6")
+						 .attr("refY","6")
+						 .attr("orient","auto");
+		
+		var arrow_path = "M2,2 L10,6 L2,10 L6,6 L2,2";
+								
+		arrowMarker.append("path")
+			.attr("d", arrow_path)
+			.attr("fill", "steelblue");						
+
+		var focus = svg.append("g")
+			.attr("class", "focus")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+		var tip = d3.tip()
+		  .attr('class', 'd3-tip')
+		  .offset([-50, 0])
+		  .direction('s')
+		  .html(function(d) {
+		    return "<span style='color:#fff; font-size:12px'>" + d.time + "</span>";
+		  });
+		svg.call(tip);
+
+        var yLineArray;
+		var rootData;		
+		d3.json("timeData.json",function(error, root){			
+			if( error ){
+				return console.log(error);
+			}			
+			var paddingY = 10;
+			var nodeLen = root.nodes.length;
+			var lineGap = parseInt((height - paddingY) / nodeLen);
+			rootData = root;	
+			var minDt = d3.min(root.logs, function(d){ return parseDate(d.time);}); 
+            var maxDt = d3.max(root.logs, function(d){ return parseDate(d.time);}); 
+			x.domain(d3.extent(root.logs.map(function(d) { return parseDate(d.time); })));
+			//x.domain([minDt, maxDt]);
+		    zoom = d3.behavior.zoom() 
+					.x(x) 
+					.on('zoom', zoomed);
+			svg.call(zoom)
+
+			yLineArray = new Array(nodeLen);
+			root.nodes.map(function(d, i) {
+				yLineArray[d.key] = margin.top + paddingY + i * lineGap;
+				var lineX = svg.append("g")
+					.attr("transform", "translate(" + margin.left + "," + yLineArray[d.key] + ")");
+
+				lineX.append("rect")
+					 .style("fill", function (d, i) { return color(); })
+					 .attr("class", "x axis")
+					 .attr("width", width)
+					 .attr("height", 1);
+
+				lineX.append("text")
+					 .attr("class", "label")
+					 .attr("x", function(d) { return -25; })
+					 .attr("y", 0)
+					 .attr("dy", "3")
+					 .text(d.key);					
+			});
+
+			reDraw();							
+		});	
+		var pointLine;
+		function reDraw(){			
+			focus.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0," + height + ")")
+				.call(xAxis);
+
+			focus.append("g")
+				.attr("class", "y axis")			
+				.call(yAxis);
+
+            pointLine = focus.selectAll("circle")
+                .data(rootData.logs)
+                .enter()  
+                .append("g");
+                                   
+            pointLine.append("circle")
+                .attr("class", "circle")
+                .attr("r", 2.0)
+                .attr("cx", function (d) { return x(parseDate(d.time)); })
+                .attr("cy", function (d) { return yLineArray[d.mobile] - 10; })
+                .attr("class", "circleMobile")
+                .style("fill", function (d) { return color(); })
+	  	        .on("mouseover", function(d,i){
+		            
+	            })	
+                .on("mouseout", function(){
+		            
+	            });	
+
+            pointLine.append("circle")
+                .attr("class", "circle")
+                .attr("r", 2.0)
+                .attr("cx", function (d) { return x(parseDate(d.time)); })
+                .attr("cy", function (d) { return yLineArray[d.site] - 10; })
+                .attr("class", "circleSite")
+                .style("fill", function (d) { return color(); })
+	  	        .on("mouseover", function(d,i){
+		            
+	            })	
+                .on("mouseout", function(){
+		            
+	            });
+
+			pointLine.append("line")
+				.attr("x1", function (d) { return x(parseDate(d.time)); })
+				.attr("y1", function (d) { return yLineArray[d.mobile] - 10; })
+				.attr("x2", function (d) { return x(parseDate(d.time)); })
+				.attr("y2", function (d) { return yLineArray[d.site] - 5; })				
+				.attr("class", "pathline")
+				.attr("marker-end","url(#arrow)")
+				.on('mouseover', tip.show)
+				.on('mouseout', tip.hide);																										
+		}
+
+		function zoomed(){	
+			svg.select('.x.axis').call(xAxis);
+			focus.selectAll(".circleMobile")
+				 .data(rootData.logs)
+				 .attr('cx', function(d,i){
+					return x(parseDate(d.time));
+			     });
+			focus.selectAll(".circleSite")
+				 .data(rootData.logs)
+				 .attr('cx', function(d,i){
+					return x(parseDate(d.time));
+			     });				 
+			focus.selectAll(".pathline")
+				 .data(rootData.logs)
+				 .attr("x1", function (d) { return x(parseDate(d.time)); })
+				 .attr("y1", function (d) { return yLineArray[d.mobile] - 10; })
+				 .attr("x2", function (d) { return x(parseDate(d.time)); })
+				 .attr("y2", function (d) { return yLineArray[d.site] - 5; });					 			
+		}
+        </script>
+</body>
+
+</html>

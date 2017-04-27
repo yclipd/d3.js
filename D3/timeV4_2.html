@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.axis path {
+  display: none;
+}
+
+.axis line {
+  stroke-opacity: 0.3;
+  shape-rendering: crispEdges;
+}
+
+.view {
+  fill: url(#gradient);
+  stroke: #000;
+}
+
+button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+}
+
+</style>
+<svg width="960" height="500">
+</svg>
+<script src="scripts/d3/build/d3.js" charset="utf-8"></script>
+<script>
+
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+
+//var zoom = d3.zoom()
+   // .scaleExtent([1, 40])
+    //.translateExtent([[-100, -100], [width + 90, height + 100]])
+    //.on("zoom", zoomed);
+
+
+
+	
+var parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
+
+var x = d3.scaleTime().range([20, width-20]);
+
+    xAxis = d3.axisBottom().scale(x).tickFormat(function (date) {
+        var formatMillisecond = d3.timeFormat(".%L"),
+    formatSecond = d3.timeFormat(":%S"),
+    formatMinute = d3.timeFormat("%H:%M"),
+    formatHour = d3.timeFormat("%H:00"),
+    formatDay = d3.timeFormat("%d日"),
+    formatWeek = d3.timeFormat("%m月%d日"),
+    formatMonth = d3.timeFormat("%m月"),
+    formatYear = d3.timeFormat("%Y年");
+       return multiFormat(date);
+        function multiFormat(date) {
+            return (d3.timeSecond(date) < date ? formatMillisecond
+                : d3.timeMinute(date) < date ? formatSecond
+                : d3.timeHour(date) < date ? formatMinute
+                : d3.timeDay(date) < date ? formatHour
+                : d3.timeMonth(date) < date ? (d3.timeWeek(date) < date ? formatDay : formatWeek)
+                : d3.timeYear(date) < date ? formatMonth
+                : formatYear)(date);
+        }
+
+
+    });
+	
+	var axis=svg.append("g")
+            .attr("transform", "translate(0," + (height - 50) + ")")
+			;
+	
+	
+	
+	function random(n){
+		return Math.floor((n*Math.random()));
+	}
+	var date=[];
+	for(var i=0 ;i<5;i++){
+		var str="2010-1-"+random(6)+" "+random(24)+":0:0";
+		date.push(str);
+	}
+var times = d3.extent(date.map(function (d) {
+        return parseDate(d);
+    }));
+	x.domain(times)
+axis.call(xAxis);
+
+	var circle=svg.append("g").selectAll("circle").data(date,function(d){
+		//console.log(d);
+		return d;
+	})
+	.enter()
+	.append("circle")
+	.attr("fill","#000").attr("cx",function(d){
+		//console.log(x(parseDate(d)),123);
+		return  x(parseDate(d));
+	}).attr("cy",300).attr("r",10);
+
+	var zoom= d3.zoom() 
+					.scaleExtent([0.1, 10])
+					.on('zoom', zoomed);
+	svg.call(zoom);
+	
+
+	
+	function zoomed() {
+		axis.call(xAxis.scale(d3.event.transform.rescaleX(x)));
+		var  a=d3.event.transform.rescaleX(x).domain();
+		var newX=d3.scaleTime().range([20, width-20]).domain(a);
+		circle.attr("cx",function(d){
+			return newX(parseDate(d));
+		})
+	
+	}
+	
+
+
+	// parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S");
+</script>
